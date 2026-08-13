@@ -1,0 +1,47 @@
+!pip install langchain langchain-groq langsmith -q
+     
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0.0/137.5 kB ? eta -:--:--
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.5/137.5 kB 5.7 MB/s eta 0:00:00
+
+import os
+
+os.environ['LANGCHAIN_TRACING_V2'] = 'true'
+
+os.environ['LANGCHAIN_API_KEY'] = 'lang_smith_key'
+
+os.environ['LANGCHAIN_PROJECT'] = 'Lab9-Agentic-AI'
+     
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(api_key="GROQ_API",
+
+               model="llama-3.1-8b-instant", temperature=0)
+
+
+
+question = ('A shop sells pens at 12 rupees each. '
+
+            'If I buy 7 and pay with 100, how much change? '
+
+            'Think step by step.')
+
+print(llm.invoke(question).content)
+     
+To find the change, we need to follow these steps:
+
+1. Calculate the total cost of the pens:
+   Number of pens = 7
+   Price per pen = 12 rupees
+   Total cost = Number of pens * Price per pen
+   Total cost = 7 * 12
+   Total cost = 84 rupees
+
+2. Calculate the change:
+   Amount paid = 100 rupees
+   Total cost = 84 rupees
+   Change = Amount paid - Total cost
+   Change = 100 - 84
+   Change = 16 rupees
+
+So, the change you will get is 16 rupees.
