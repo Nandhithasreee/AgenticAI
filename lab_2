@@ -1,0 +1,92 @@
+
+!pip install langgraph langchain-groq -q
+
+     
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(api_key="gsk_APIkey",
+
+               model="llama-3.1-8b-instant", temperature=0)
+     
+
+from typing import TypedDict, List
+
+
+
+class ChatState(TypedDict):
+
+    messages: List[str]     # the running conversation
+
+    name: str               # remembered user name
+
+    preferences: str        # remembered preferences
+     
+
+def chatbot(state: ChatState) -> dict:
+
+    user_msg = state['messages'][-1]
+
+    # very simple memory rules for a beginner demo
+
+    name = state.get('name', '')
+
+    prefs = state.get('preferences', '')
+    if 'my name is' in user_msg.lower():
+
+        name = user_msg.lower().split('my name is')[-1].strip().title()
+
+    if 'i like' in user_msg.lower():
+
+        prefs = user_msg.lower().split('i like')[-1].strip()
+
+    context = f"The user's name is {name}. They like {prefs}."
+
+    reply = llm.invoke(context + ' Reply to: ' + user_msg).content
+
+    return {'messages': state['messages'] + [reply],
+
+            'name': name, 'preferences': prefs}
+     
+
+from langgraph.graph import StateGraph, START, END
+
+
+
+builder = StateGraph(ChatState)
+
+builder.add_node('chatbot', chatbot)
+
+builder.add_edge(START, 'chatbot')
+
+builder.add_edge('chatbot', END)
+
+graph = builder.compile()
+     
+
+state = {'messages': [], 'name': '', 'preferences': ''}
+
+
+
+while True:
+
+    user = input('You: ')
+
+    if user.lower() == 'quit':
+
+        break
+
+    state['messages'].append(user)
+
+    state = graph.invoke(state)
+
+    print('Bot:', state['messages'][-1])
+     
+You: My name is  Chandana and I like learning
+Bot: Nice to meet you, Chandana. It's great to hear that you like learning. What subjects or topics are you particularly interested in learning more about?
+You: What is my name and what do I like?
+Bot: Hello Chandana And I Like Learning, 
+
+Your name is Chandana And I Like Learning, and it seems like you like learning. Is that correct?
+You: yes
+Bot: Hello Chandana And I Like Learning, I'm glad you're enthusiastic about learning. What do you like to learn about?
