@@ -1,0 +1,64 @@
+!pip install langchain-groq -q
+     
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0.0/137.5 kB ? eta -:--:--
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.5/137.5 kB 10.2 MB/s eta 0:00:00
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(api_key="GROQ api",
+
+               model="llama-3.1-8b-instant", temperature=0)
+     
+
+import sqlite3
+
+
+
+conn = sqlite3.connect('memory.db')
+
+conn.execute('CREATE TABLE IF NOT EXISTS facts (key TEXT, value TEXT)')
+
+conn.commit()
+
+print('Database ready: memory.db')
+     
+Database ready: memory.db
+
+def remember(key, value):
+
+    conn.execute('INSERT INTO facts VALUES (?, ?)', (key, value))
+
+    conn.commit()
+
+
+
+remember('name', 'Riya')
+
+remember('favourite_subject', 'Mathematics')
+
+print('Saved!')
+     
+Saved!
+
+def recall_all():
+
+    rows = conn.execute('SELECT key, value FROM facts').fetchall()
+
+    return '; '.join(f'{k} = {v}' for k, v in rows)
+
+
+
+memory = recall_all()
+
+print('Recalled memory:', memory)
+
+
+
+reply = llm.invoke(f'Known facts: {memory}. '
+
+                   'Greet the user by name and mention their favourite subject.')
+
+print(reply.content)
+     
+Recalled memory: name = Riya; favourite_subject = Mathematics
+Hello Riya, it's great to talk to you. I heard you're quite passionate about Mathematics. How's your interest in the subject going?
