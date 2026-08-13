@@ -1,0 +1,153 @@
+
+!pip install langchain langchain-community langchain-groq chromadb \ sentence-transformers pypdf langchain-huggingface -q
+     
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.0/52.0 kB 2.8 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.4/2.4 MB 71.8 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 23.3/23.3 MB 71.4 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 349.5/349.5 kB 22.7 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 278.2/278.2 kB 20.8 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.5/137.5 kB 10.0 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.6/4.6 MB 77.5 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 49.5 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 18.7/18.7 MB 75.8 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 72.5/72.5 kB 4.9 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 178.9/178.9 kB 13.6 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 61.9/61.9 kB 4.3 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 203.7/203.7 kB 15.6 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.6/71.6 kB 5.2 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 61.7/61.7 kB 4.6 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.6/60.6 kB 4.6 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 73.1/73.1 kB 4.9 MB/s eta 0:00:00
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+google-colab 1.0.0 requires requests==2.32.4, but you have requests 2.34.2 which is incompatible.
+google-adk 2.3.0 requires opentelemetry-api<=1.42.1,>=1.39, but you have opentelemetry-api 1.43.0 which is incompatible.
+google-adk 2.3.0 requires opentelemetry-sdk<=1.42.1,>=1.39, but you have opentelemetry-sdk 1.43.0 which is incompatible.
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(api_key="API_KEY",
+
+               model="llama-3.1-8b-instant", temperature=0)
+     
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+
+# 1. Load the specific PDF you uploaded
+loader = PyPDFLoader("Chandana_Dion_Resume.pdf")
+docs = loader.load()
+
+# 2. Chop it up into pieces the LLM can quickly search through
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+splits = text_splitter.split_documents(docs)
+
+# 3. Create the vector embeddings
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+# 4. Spin up the 'db' variable globally
+db = Chroma.from_documents(documents=splits, embedding=embeddings)
+     
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+from google.colab import drive
+drive.mount('/content/drive')
+     
+Mounted at /content/drive
+
+def answer_from_pdf(query):
+    # This will now successfully find 'db'
+    docs = db.as_retriever().invoke(query)
+    context = '\n'.join(d.page_content for d in docs)
+
+    prompt = (
+        f"Use ONLY this context to answer.\n{context}\n\n"
+        f"Question: {query}\n"
+        "If the context does not contain the answer, reply exactly: "
+        "'I don't know'."
+    )
+
+    return llm.invoke(prompt).content
+     
+
+def adaptive_answer(question, max_tries=3):
+    query = question
+
+    for attempt in range(1, max_tries + 1):
+        print(f"Attempt {attempt} with query: {query}")
+
+        answer = answer_from_pdf(query)
+
+        # If the LLM successfully answered without saying "I don't know"
+        if "i don't know" not in answer.lower():
+            return answer  # Return the good answer and stop loop
+
+        # Otherwise, ask the LLM to rephrase the search query for the next loop
+        query = llm.invoke(
+            f"Rephrase this search query differently to find relevant info: {query}"
+        ).content
+
+    return 'Could not find an answer after several tries.'
+
+# Run the final agent test
+print(adaptive_answer('What is the main conclusion of the document?'))
+     
+Attempt 1 with query: What is the main conclusion of the document?
+Attempt 2 with query: Here are a few alternative search queries to find relevant information:
+
+1. "Summary of the document"
+2. "Key takeaways from the document"
+3. "Main points of the document"
+4. "Document abstract or synopsis"
+5. "Conclusion or findings of the document"
+6. "Document summary or overview"
+7. "What is the author's main argument or conclusion?"
+8. "Document highlights or main points"
+9. "Summary of the document's main points or findings"
+10. "Author's conclusion or final thoughts"
+
+You can also try using specific keywords related to the document's topic or subject to refine your search results.
+
+Additionally, you can try searching for:
+
+- Executive summary
+- Abstract
+- Introduction and conclusion
+- Main findings
+- Recommendations
+- Final thoughts
+
+This will help you find relevant information and get a better understanding of the document's main conclusion.
+Based on the provided context, here are some possible answers to the alternative search queries:
+
+1. "Summary of the document"
+   - The author has worked on various projects, including Zomato EDA, Titanic Survival Prediction, AI Reading Helper for Dyslexia Students, and CareerPilot. They have gained hands-on experience with technologies like Python, Pandas, Matplotlib, Scikit-learn, Flask, React.js, and Git.
+
+2. "Key takeaways from the document"
+   - Key takeaways include the author's experience with data analysis, machine learning, and web development. They have worked on projects that involve text simplification, OCR, and AI-powered career guidance.
+
+3. "Main points of the document"
+   - Main points include the author's projects, skills, and experience with various technologies and tools.
+
+4. "Document abstract or synopsis"
+   - The author has worked on various projects, including data analysis, machine learning, and web development. They have gained hands-on experience with technologies like Python, Flask, React.js, and Git.
+
+5. "Conclusion or findings of the document"
+   - The author's conclusion is that they have gained valuable experience and skills in data analysis, machine learning, and web development.
+
+6. "Document summary or overview"
+   - The author has worked on various projects, including Zomato EDA, Titanic Survival Prediction, AI Reading Helper for Dyslexia Students, and CareerPilot. They have gained hands-on experience with technologies like Python, Pandas, Matplotlib, Scikit-learn, Flask, React.js, and Git.
+
+7. "What is the author's main argument or conclusion?"
+   - The author's main argument is that they have gained valuable experience and skills in data analysis, machine learning, and web development.
+
+8. "Document highlights or main points"
+   - Highlights include the author's projects, skills, and experience with various technologies and tools.
+
+9. "Summary of the document's main points or findings"
+   - The author's main points include their experience with data analysis, machine learning, and web development. They have worked on projects that involve text simplification, OCR, and AI-powered career guidance.
+
+10. "Author's conclusion or final thoughts"
+    - The author's conclusion is that they have gained valuable experience and skills in data analysis, machine learning, and web development.
