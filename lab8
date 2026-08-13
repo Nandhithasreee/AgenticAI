@@ -1,0 +1,74 @@
+
+!pip install langgraph langchain-groq -q
+     
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0.0/137.5 kB ? eta -:--:--
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.5/137.5 kB 4.1 MB/s eta 0:00:00
+
+from langchain_groq import ChatGroq
+
+llm = ChatGroq(api_key="GROQ_API",
+
+               model="llama-3.1-8b-instant", temperature=0)
+     
+
+from typing import TypedDict
+
+
+
+class TeamState(TypedDict):
+
+    task: str          # the original problem
+
+    worker_result: str # what the worker computed
+
+    summary: str       # the supervisor's final summary
+     
+
+def worker(state: TeamState) -> dict:
+
+    answer = llm.invoke('Solve this math problem, show the number only: '
+
+                        + state['task']).content
+
+    return {'worker_result': answer}
+
+
+
+def supervisor(state: TeamState) -> dict:
+
+    summary = llm.invoke(
+
+        f"The worker solved '{state['task']}' and got "
+
+        f"{state['worker_result']}. Write a one-line summary.").content
+
+    return {'summary': summary}
+     
+
+from langgraph.graph import StateGraph, START, END
+
+
+
+builder = StateGraph(TeamState)
+
+builder.add_node('worker', worker)
+
+builder.add_node('supervisor', supervisor)
+
+builder.add_edge(START, 'worker')
+
+builder.add_edge('worker', 'supervisor')
+
+builder.add_edge('supervisor', END)
+
+graph = builder.compile()
+     
+
+result = graph.invoke({'task': 'What is 144 divided by 12, then plus 5?'})
+
+print('Worker result:', result['worker_result'])
+
+print('Supervisor summary:', result['summary'])
+     
+Worker result: 12
+Supervisor summary: The worker incorrectly solved the math problem 'What is 144 divided by 12, then plus 5?' by first adding 5 to 144, resulting in 149, then dividing by 12, which equals 12.49, not 12.
